@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="hr">
+
+<head>
+	<title>LV5</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<script src="https://d3js.org/d3.v3.min.js"></script>
+	<script src="http://d3js.org/topojson.v1.min.js"></script>
+	<style>
+
+		#barchart{
+			margin-top: 50px;
+
+		}
+		#barchart rect{
+			cursor: pointer;
+		}
+		#pie_chart{
+			display: inline;
+		}
+		#legend_pie_header{
+			display: none;
+			position: absolute;			
+			text-align: center;	
+			top: 680px;	
+			left:850px;					
+			padding: 2px;				
+			font: 20px sans-serif;							
+		}
+
+		#legend_header{
+			display: block;
+			position: absolute;			
+			text-align: center;	
+			top: 500px;					
+			padding: 2px;				
+			font: 20px sans-serif;							
+		}
+		#ispis_zupanije{
+			display: none;
+			position: absolute;			
+			text-align: center;			
+			width: 250px;					
+			height: 50px;					
+			padding: 2px;				
+			font: 18px sans-serif;	
+			font-weight: bold; 	
+			background: lightsteelblue;	
+			border: 0px;		
+			border-radius: 8px;			
+			pointer-events: none;			
+		}
+		#barchart path { 
+			stroke: steelblue;
+			stroke-width: 2;
+			fill: none;}
+			#barchart .axis path,
+			#barchart .axis line {
+				fill: none;
+				stroke: grey;
+				stroke-width: 2;
+				shape-rendering: crispEdges;}
+
+				#pie_chart .tooltip_pie{
+					background: #eee;                                              
+					box-shadow: 0 0 5px #999999;                                   
+					color: #333;                                                   
+					display: none;                                                 
+					font-size: 20px;  
+					font-weight: bold;                                                                                            
+					padding: 10px;                                                 
+					position: absolute;                                            
+					text-align: center;                                                                                               
+					width: 150px;                                                   
+					z-index: 10;               	
+				}    
+				body{
+					background-color: lightgrey;
+				}
+				h1{
+					text-align: center;
+					color: black;
+				}
+
+			</style>
+		</head>
+
+		<body>
+
+			<h1>Statistika iz Upisnika poljoprivrednika 2016.</h1>
+			<script>
+
+//Učitavanje podataka iz data.json
+d3.json("data.json", function(error, cro) {
+
+	var bardata = [0];
+	var data_pie = [0];
+
+	var dobnaSkupina = ["<40", "41-45", "46-50", "51-55", "56-60", "61-65", ">65"];
+	var height2 = 400,
+	width2 = 600,
+	barPadding = 2,		
+	barwidth = width2/7-barPadding,
+	margin = {top: 50, bottom: 80, left:80, right: 50};
+
+//Karta
+var width = 650;
+var height = 650;
+var projection = d3.geo.mercator()
+.center([0, 10])
+.scale(6000)
+.translate([17450, 4500])
+.rotate([-180, 0]);
+var path = d3.geo.path()
+.projection(projection);
+var svg_karta = d3.select("body").append("svg")
+.attr("width", width)
+.attr("height", height)
+.attr('style', 'float:left');
+
+var color = d3.scale.linear()
+.domain([0, 14945])
+.clamp(true)
+.range(['#fff', '#1db302']);
+
+d3.select("body").append("div")
+.attr("id", "barchart");
+
+d3.select("body").append("div")
+.attr("id", "ispis_zupanije");
+
+d3.select("body").append("div")
+.attr("id", "legend_header")
+.html("<h5>Broj OPG-a</h5>");
+
+d3.select("body").append("div")
+.attr("id", "legend_pie_header")
+.html("<h5>Poljoprivredna gospodarstva prema tipu</h5>");	
+
+var data = topojson.feature(cro, cro.objects.layer1);
+var states = svg_karta.selectAll("path.county")
+.data(data.features)
+.enter()
+.append("path")
+.attr("class", "county")
+.attr("id", function(d) { return d.id; })
+.attr("d", path)
+.style("fill", function(d) {
+	return color(d.properties.br_gosp_ukupno);
+})
+.style("stroke", "gray")
+.style("stroke-width", 1)
+.style("stroke-opacity", 1)
+.on("mouseover", function(d,i){ 
+	states.style("cursor", "pointer");
+	var currentState = this;
+	d3.select(this).style('fill', '#ffe647');
+	d3.select("#ispis_zupanije") 	
+	.style("left", (d3.event.pageX) + "px")		
+	.style("top", (d3.event.pageY ) + "px")
+	.style("display", "block")        
+	.html(d.properties.name + "<br> Broj gospodarstava: "+d.properties.br_gosp_ukupno);
+})
+
+.on('mouseout', function(d) {
+	d3.select("#ispis_zupanije")
+	.style("display", "none");  
+	states.style("fill", function(d) {
+		return color(d.properties.br_gosp_ukupno);
+	})
+})
+.on('click', function(d){
+	d3.select("#legend_pie_header")
+	.style("display", "none");
+	d3.select("#barchart svg").remove();
+	d3.select("#pie_chart").remove();
+    	// console.log(d.properties.id_zup);
+    	var ID_zupanije = d.properties.id_zup;
+    	console.log(d.properties.name);
+    	var naslov_zupanije = d.properties.name;
+    	bardata[0] = d.properties.manje_40.obiteljsko_gosp + d.properties.manje_40.obrt + d.properties.manje_40.ostali + d.properties.manje_40.trgovacko_drustvo + d.properties.manje_40.zadruga;
+
+    	bardata[1] = d.properties.a41_45.obiteljsko_gosp + d.properties.a41_45.obrt + d.properties.a41_45.ostali + d.properties.a41_45.trgovacko_drustvo + d.properties.a41_45.zadruga;
+
+    	bardata[2] = d.properties.a46_50.obiteljsko_gosp + d.properties.a46_50.obrt + d.properties.a46_50.ostali + d.properties.a46_50.trgovacko_drustvo + d.properties.a46_50.zadruga;
+
+    	bardata[3] = d.properties.a51_55.obiteljsko_gosp + d.properties.a51_55.obrt + d.properties.a51_55.ostali + d.properties.a51_55.trgovacko_drustvo + d.properties.a51_55.zadruga;
+
+    	bardata[4] = d.properties.a56_60.obiteljsko_gosp + d.properties.a56_60.obrt + d.properties.a56_60.ostali + d.properties.a56_60.trgovacko_drustvo + d.properties.a56_60.zadruga;
+
+    	bardata[5] = d.properties.a61_65.obiteljsko_gosp + d.properties.a61_65.obrt + d.properties.a61_65.ostali + d.properties.a61_65.trgovacko_drustvo + d.properties.a61_65.zadruga;
+
+    	bardata[6] = d.properties.vise_65.obiteljsko_gosp + d.properties.vise_65.obrt + d.properties.vise_65.ostali + d.properties.vise_65.trgovacko_drustvo + d.properties.vise_65.zadruga;
+    	crtaj_graf(ID_zupanije,naslov_zupanije);
+    });
+
+var color_domain = [500, 1500, 3500, 7500, 15000];
+var ext_color_domain = [0, 500, 1500, 3500, 7500, 15000];
+var legend_labels = ["< 500", "500", "1500", "3500", "7500", "> 15000"];          
+var color_legend = d3.scale.threshold()
+.domain(color_domain)
+.range(["#adfcad", "#ffcb40", "#ffba00", "#ff7d73", "#ff4e40", "#1db302"]);
+
+var legend = svg_karta.selectAll("g.legend")
+.data(ext_color_domain)
+.enter().append("g")
+.attr("class", "legend");
+
+var ls_w = 25, ls_h = 25;
+
+legend.append("rect")
+.attr("x", 20)
+.attr("y", function(d, i){ return height - (i*ls_h) - 2*ls_h;})
+.attr("width", ls_w)
+.attr("height", ls_h)
+.style("fill", function(d, i) { return color(d); })
+.style("opacity", 1);
+
+legend.append("text")
+.attr("x", 50)
+.attr("y", function(d, i){ return height - (i*ls_h) - ls_h - 4;})
+.text(function(d, i){ return legend_labels[i]; });
+
+function crtaj_graf(x,naslov){
+    //skale
+    var xScale = d3.scale.ordinal()
+    .domain(d3.range(bardata.length))
+    .rangeBands([0, width2]); 
+
+    var yScale = d3.scale.linear()
+    .domain([0, d3.max(bardata, function(d) {return d ;})])
+    .range([height2,0]);
+
+    var xAxis = d3.svg.axis()
+    .scale(xScale)
+    .orient("bottom")
+    .tickFormat(function(d, i) { return dobnaSkupina[i] });
+
+    var yAxis = d3.svg.axis()
+    .scale(yScale)
+    .orient("left")
+    .ticks(10);
+
+    var svg = d3.select("#barchart")
+    .append("svg")
+    .attr("width", width2 + margin.left + margin.right)
+    .attr("height", height2 + margin.bottom + margin.top)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height2 + ")")
+    .call(xAxis)
+    .selectAll("text")
+    .style("text-anchor", "middle");
+
+    svg.append("text")
+    .attr("x", (width2 / 2))
+    .attr("y", (height2 + (margin.bottom / 2)))
+    .attr("dy", "1em")
+    .style("text-anchor", "middle")
+    .html("Dobna skupina nositelja/odgovorne osobe")
+    .style("font-size", "20px");
+
+    svg.append("g")
+    .attr("class", "y axis")
+    .call(yAxis);
+
+    svg.append("text")
+    .attr("transform", "rotate(-90)")
+    .attr("x",0 - (height2 / 2))
+    .attr("y",15 - margin.left)
+    .attr("dy", ".3em")
+    .style("text-anchor", "middle")
+    .text("Broj OPG-a")
+    .style("font-size", "20px");
+
+    svg.append("text")
+    .attr("x", (width2 / 2))             
+    .attr("y", 0 - (margin.top / 2))
+    .attr("text-anchor", "middle")  
+    .attr("dy", "0.8em")
+    .style("font-size", "23px") 
+    .style("font-weight", "bold")  
+    .text(naslov);
+
+
+    data_pie = [
+    {name: 'obrt', value: 0},
+    {name: 'ostali', value: 0},
+    {name: 'trgovačko društvo', value: 0},
+    {name: 'zadruga', value: 0}
+    ];
+
+
+    var barchart = svg.selectAll("rect")
+    .data(bardata)
+    .enter()
+    .append("rect")
+    .attr('x', function (d,i){
+    	return xScale(i);
+    })
+    .attr('y', height2)
+    .attr("height", 0)
+    .attr('width', barwidth)
+    .attr("id", function(d,i){
+    	return i;
+    })
+    .attr("fill", "grey")
+    .on('mouseover', function(d){
+    	barchart.style("cursor", "pointer");
+    })
+    .on('click', function(d,i){
+    	states = svg_karta.selectAll("path.county")
+    	.data(data.features)
+                // console.log(data.features[x-1].properties.manje_40.obrt)
+                // console.log(this.getAttribute("id"));
+                switch(this.getAttribute("id")){
+                	case "0":
+                	data_pie[0].value = data.features[x-1].properties.manje_40.obrt;
+                	data_pie[1].value = data.features[x-1].properties.manje_40.ostali;
+                	data_pie[2].value = data.features[x-1].properties.manje_40.trgovacko_drustvo;
+                	data_pie[3].value = data.features[x-1].properties.manje_40.zadruga;  
+                	break;
+                	case "1":
+                	data_pie[0].value = data.features[x-1].properties.a41_45.obrt;
+                	data_pie[1].value = data.features[x-1].properties.a41_45.ostali;
+                	data_pie[2].value = data.features[x-1].properties.a41_45.trgovacko_drustvo;
+                	data_pie[3].value = data.features[x-1].properties.a41_45.zadruga;  
+                	break;
+                	case "2":
+                	data_pie[0].value = data.features[x-1].properties.a46_50.obrt;
+                	data_pie[1].value = data.features[x-1].properties.a46_50.ostali;
+                	data_pie[2].value = data.features[x-1].properties.a46_50.trgovacko_drustvo;
+                	data_pie[3].value = data.features[x-1].properties.a46_50.zadruga;  
+                	break;
+                	case "3":
+                	data_pie[0].value = data.features[x-1].properties.a51_55.obrt;
+                	data_pie[1].value = data.features[x-1].properties.a51_55.ostali;
+                	data_pie[2].value = data.features[x-1].properties.a51_55.trgovacko_drustvo;
+                	data_pie[3].value = data.features[x-1].properties.a51_55.zadruga;  
+                	break;
+                	case "4":
+                	data_pie[0].value = data.features[x-1].properties.a56_60.obrt;
+                	data_pie[1].value = data.features[x-1].properties.a56_60.ostali;
+                	data_pie[2].value = data.features[x-1].properties.a56_60.trgovacko_drustvo;
+                	data_pie[3].value = data.features[x-1].properties.a56_60.zadruga;  
+                	break;
+                	case "5":
+                	data_pie[0].value = data.features[x-1].properties.a61_65.obrt;
+                	data_pie[1].value = data.features[x-1].properties.a61_65.ostali;
+                	data_pie[2].value = data.features[x-1].properties.a61_65.trgovacko_drustvo;
+                	data_pie[3].value = data.features[x-1].properties.a61_65.zadruga;  
+                	break;
+                	case "6":
+                	data_pie[0].value = data.features[x-1].properties.vise_65.obrt;
+                	data_pie[1].value = data.features[x-1].properties.vise_65.ostali;
+                	data_pie[2].value = data.features[x-1].properties.vise_65.trgovacko_drustvo;
+                	data_pie[3].value = data.features[x-1].properties.vise_65.zadruga;  
+                	break;
+                }
+                console.log(data_pie);
+                crtaj_pie();
+            });
+
+    barchart.on('mouseover', function(d){
+
+    	d3.select(this)
+    	.style('opacity', .5);
+    })
+    .on('mouseout', function(d){
+    	d3.select(this)
+    	.style('opacity', 1);
+    });
+
+
+
+
+    barchart.transition()
+    .attr('height', function(d){
+    	return yScale(0) - yScale(d);
+    })                  
+    .attr('y', function (d){
+    	return yScale(d);
+    })
+    .delay(function(d,i){
+    	return i * 15;
+    })
+    .duration(1000)
+    .ease('elastic')
+
+}//crtaj_graf() - CLOSE
+
+
+function crtaj_pie(){
+	// console.log("crtaj_pie");
+	d3.select("#pie_chart").remove();
+
+	d3.select("#legend_pie_header")
+	.style("display", "block");
+
+	var width_pie = 600;
+	var height_pie = 600;
+	var outerRadius = 200;
+	var innerRadius = 120;
+
+	var donutWidth = 75;
+	var legendRectSize = 18;
+	var legendSpacing = 4;
+
+	var color_pie = d3.scale.category20()
+	var arc = d3.svg.arc()
+	.outerRadius(outerRadius)
+	.innerRadius(innerRadius);
+	
+	d3.select("body").append("div")
+	.attr("id", "pie_chart");  
+
+	var svg_pie = d3.select("#pie_chart")
+	.append("svg")
+	.attr("width", width_pie)
+	.attr("height", height_pie)
+	.append('g')
+	.attr('transform', 'translate(' + (width_pie / 2) + 
+		',' + (height_pie / 2) + ')');
+
+	var pie = d3.layout.pie()
+	.value(function(d) { return d.value;})
+	.sort( function(d) { return null;});
+
+
+	var tooltip_pie = d3.select('#pie_chart')                              
+	.append('div')                                               
+	.attr('class', 'tooltip_pie');                                   
+	
+	tooltip_pie.append('div')                                          
+	.attr('class', 'label');                                     
+	
+        // tooltip_pie.append('div')                                          
+        //   .attr('class', 'count');                                     
+
+        tooltip_pie.append('div')                                          
+        .attr('class', 'percent');                                    
+
+
+        var pieArcs = svg_pie.selectAll("g.pie")
+        .data(pie(data_pie))
+        .enter()
+        .append("g")
+        .attr("class", "pie")
+        .attr("transform", "translate(" + 50+ ", " + 0 + ")");
+
+        pieArcs.on('mouseover', function(d) {                            
+        	var total = d3.sum(data_pie.map(function(d) {                
+        		return d.value;                                           
+        	}));                                                     
+        	var percent = Math.round(1000 * d.data.value / total) / 10; 
+        	tooltip_pie.select('.label').html(d.data.name);                
+            // tooltip_pie.select('.count').html(d.data.value);                
+            tooltip_pie.select('.percent').html(percent + '%');             
+            tooltip_pie.style('display', 'block');  
+            
+        });    
+
+
+        pieArcs.on("mousemove", function(d){
+        	tooltip_pie.style('left', (d3.event.pageX) + "px");  
+        	tooltip_pie.style('top', (d3.event.pageY ) + "px"); 
+        })
+        
+        pieArcs.on('mouseout', function() {                             
+        	tooltip_pie.style('display', 'none');                          
+        });                                  
+
+        pieArcs.append("path")
+        .attr("fill", function(d, i) { return color_pie(i);})
+        .attr("d", arc);
+
+
+        var legend_pie = svg_pie.selectAll('.legend')
+        .data(color_pie.domain())
+        .enter()
+        .append('g')
+        .attr('class', 'legend')
+        .attr('transform', function(d, i) {
+        	var height = legendRectSize + legendSpacing;
+        	var offset =  height * color_pie.domain().length / 2;
+        	var horz = -2 * legendRectSize;
+        	var vert = i * height - offset;
+        	return 'translate(' + horz +  ',' + vert + ')';
+        });
+
+        legend_pie.append('rect')
+        .attr('width', legendRectSize)
+        .attr('height', legendRectSize)                                   
+        .style('fill', color_pie)
+        .style('stroke', color_pie);
+        
+        legend_pie.append('text')
+        .attr('x', legendRectSize + legendSpacing)
+        .attr('y', legendRectSize - legendSpacing)
+        .data(data_pie)
+        .text(function(d) { return d.name; });
+
+}//crtaj_pie() - CLOSE
+}); //JSON - CLOSE	
+
+</script>
+</body>
+
+</html>
