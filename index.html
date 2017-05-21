@@ -195,32 +195,29 @@ var states = svg_karta.selectAll("path.county")
     	crtaj_graf(ID_zupanije,naslov_zupanije);
     });
 
-var color_domain = [500, 1500, 3500, 7500, 15000];
-var ext_color_domain = [0, 500, 1500, 3500, 7500, 15000];
-var legend_labels = ["< 500", "500", "1500", "3500", "7500", "> 15000"];          
-var color_legend = d3.scale.threshold()
-.domain(color_domain)
-.range(["#adfcad", "#ffcb40", "#ffba00", "#ff7d73", "#ff4e40", "#1db302"]);
+var legendRectSize = 18;
+var legendSpacing = 9;
+var legend = svg_karta.selectAll('.legend')
+  .data([15000,7500,3500,1500,500,0])
+  .enter()
+  .append('g')
+  .attr('class', 'legend')
+  .attr('transform', function(d, i) {
+    return 'translate(' + 0 + ',' + (height-170 + i*25 )+ ')';
+  });
 
-var legend = svg_karta.selectAll("g.legend")
-.data(ext_color_domain)
-.enter().append("g")
-.attr("class", "legend");
+  legend.append('rect')
+  .attr('width', legendRectSize)
+  .attr('height', legendRectSize)
+  .style('fill', color)
+  .style('stroke', color);
 
-var ls_w = 25, ls_h = 25;
+  legend.append('text')
+  .attr('x', legendRectSize + legendSpacing)
+  .attr('y', legendRectSize - legendSpacing + 5)
+  .text(function(d) { return d; });
 
-legend.append("rect")
-.attr("x", 20)
-.attr("y", function(d, i){ return height - (i*ls_h) - 2*ls_h;})
-.attr("width", ls_w)
-.attr("height", ls_h)
-.style("fill", function(d, i) { return color(d); })
-.style("opacity", 1);
 
-legend.append("text")
-.attr("x", 50)
-.attr("y", function(d, i){ return height - (i*ls_h) - ls_h - 4;})
-.text(function(d, i){ return legend_labels[i]; });
 
 function crtaj_graf(x,naslov){
     //skale
